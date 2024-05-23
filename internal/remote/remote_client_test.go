@@ -19,13 +19,14 @@ package remote
 import (
 	"bytes"
 	"context"
-	"github.com/apache/rocketmq-client-go/v2/errors"
 	"math/rand"
 	"net"
 	"reflect"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/apache/rocketmq-client-go/v2/errors"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -161,7 +162,7 @@ func TestInvokeSync(t *testing.T) {
 		receiveCommand, err := client.InvokeSync(context.Background(), addr,
 			clientSendRemtingCommand)
 		if err != nil {
-			t.Fatalf("failed to invoke synchronous. %s", err)
+			t.Errorf("failed to invoke synchronous. %s", err)
 		} else {
 			assert.Equal(t, len(receiveCommand.ExtFields), 0)
 			assert.Equal(t, len(serverSendRemotingCommand.ExtFields), 0)
@@ -180,6 +181,7 @@ func TestInvokeSync(t *testing.T) {
 	}
 	defer l.Close()
 	clientSend.Done()
+out:
 	for {
 		conn, err := l.Accept()
 		if err != nil {
@@ -204,10 +206,9 @@ func TestInvokeSync(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to write body to conneciton.")
 			}
-			goto done
+			break out
 		}
 	}
-done:
 	wg.Wait()
 }
 
@@ -242,6 +243,7 @@ func TestInvokeAsync(t *testing.T) {
 	}
 	defer l.Close()
 	count := 0
+out:
 	for {
 		conn, err := l.Accept()
 		if err != nil {
@@ -263,11 +265,10 @@ func TestInvokeAsync(t *testing.T) {
 			}
 			count++
 			if count >= cnt {
-				goto done
+				break out
 			}
 		}
 	}
-done:
 
 	wg.Wait()
 }
@@ -303,7 +304,7 @@ func TestInvokeAsyncTimeout(t *testing.T) {
 	assert.Nil(t, err)
 	defer l.Close()
 	clientSend.Done()
-
+out:
 	for {
 		conn, err := l.Accept()
 		assert.Nil(t, err)
@@ -316,10 +317,9 @@ func TestInvokeAsyncTimeout(t *testing.T) {
 			assert.Nil(t, err, "failed to decode RemotingCommnad.")
 
 			time.Sleep(5 * time.Second) // force client timeout
-			goto done
+			break out
 		}
 	}
-done:
 	wg.Wait()
 }
 
@@ -337,7 +337,7 @@ func TestInvokeOneWay(t *testing.T) {
 		clientSend.Wait()
 		err := client.InvokeOneWay(context.Background(), addr, clientSendRemtingCommand)
 		if err != nil {
-			t.Fatalf("failed to invoke synchronous. %s", err)
+			t.Errorf("failed to invoke synchronous. %s", err)
 		}
 		wg.Done()
 	}()
@@ -348,6 +348,7 @@ func TestInvokeOneWay(t *testing.T) {
 	}
 	defer l.Close()
 	clientSend.Done()
+out:
 	for {
 		conn, err := l.Accept()
 		if err != nil {
@@ -364,9 +365,8 @@ func TestInvokeOneWay(t *testing.T) {
 				t.Errorf("wrong code. want=%d, got=%d", receivedRemotingCommand.Code,
 					clientSendRemtingCommand.Code)
 			}
-			goto done
+			break out
 		}
 	}
-done:
 	wg.Wait()
 }

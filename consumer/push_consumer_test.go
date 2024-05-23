@@ -21,10 +21,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/apache/rocketmq-client-go/v2/rlog"
-
 	"github.com/apache/rocketmq-client-go/v2/internal"
 	"github.com/apache/rocketmq-client-go/v2/primitive"
+	"github.com/apache/rocketmq-client-go/v2/rlog"
+
 	"github.com/golang/mock/gomock"
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -54,6 +54,7 @@ func TestStart(t *testing.T) {
 			})
 			return ConsumeSuccess, nil
 		})
+		t.Log(err)
 
 		_, exists := c.subscriptionDataTable.Load("TopicTest")
 		So(exists, ShouldBeTrue)

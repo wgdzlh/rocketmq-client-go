@@ -20,16 +20,17 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/apache/rocketmq-client-go/v2"
-	"github.com/apache/rocketmq-client-go/v2/primitive"
-	"github.com/apache/rocketmq-client-go/v2/producer"
-	"github.com/apache/rocketmq-client-go/v2/rlog"
 	"os"
 	"os/signal"
 	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"github.com/apache/rocketmq-client-go/v2"
+	"github.com/apache/rocketmq-client-go/v2/primitive"
+	"github.com/apache/rocketmq-client-go/v2/producer"
+	"github.com/apache/rocketmq-client-go/v2/rlog"
 )
 
 type statiBenchmarkProducerSnapshot struct {
@@ -141,7 +142,12 @@ func (bp *producerBenchmark) produceMsg(stati *statiBenchmarkProducerSnapshot, e
 	}
 
 	err = p.Start()
-
+	if err != nil {
+		rlog.Error("Producer Start Error", map[string]interface{}{
+			rlog.LogKeyUnderlayError: err.Error(),
+		})
+		return
+	}
 	defer p.Shutdown()
 
 	topic, tag := bp.topic, "benchmark-producer"
@@ -179,9 +185,9 @@ AGAIN:
 		goto AGAIN
 	}
 	rlog.Error("Send Message Error", map[string]interface{}{
-		"topic":                  topic,
-		"tag":                    tag,
-		rlog.LogKeyUnderlayError: err.Error(),
+		"topic":  topic,
+		"tag":    tag,
+		"status": r.Status,
 	})
 	goto AGAIN
 }
@@ -228,15 +234,14 @@ func (bp *producerBenchmark) run(args []string) {
 	wg := sync.WaitGroup{}
 
 	for i := 0; i < bp.instanceCount; i++ {
-		i := i
-		go func() {
-			wg.Add(1)
+		wg.Add(1)
+		go func(id int) {
 			bp.produceMsg(&stati, exitChan)
 			rlog.Info("Producer Done and Exit", map[string]interface{}{
-				"id": i,
+				"id": id,
 			})
 			wg.Done()
-		}()
+		}(i)
 	}
 
 	// snapshot

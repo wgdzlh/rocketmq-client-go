@@ -64,9 +64,9 @@ func (s *Set) Len() int {
 	return len(s.items)
 }
 
-var _ json.Marshaler = &Set{}
+var _ json.Marshaler = Set{}
 
-func (s *Set) MarshalJSON() ([]byte, error) {
+func (s Set) MarshalJSON() ([]byte, error) {
 	if len(s.items) == 0 {
 		return []byte("[]"), nil
 	}

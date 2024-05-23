@@ -19,16 +19,16 @@ package internal
 
 import (
 	"context"
-	"github.com/apache/rocketmq-client-go/v2/errors"
 	"math/rand"
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
-	jsoniter "github.com/json-iterator/go"
+	"github.com/apache/rocketmq-client-go/v2/errors"
+
+	json "github.com/json-iterator/go"
 	"github.com/tidwall/gjson"
 
 	"github.com/apache/rocketmq-client-go/v2/internal/remote"
@@ -114,10 +114,7 @@ func (s *namesrvs) UpdateTopicRouteInfo(topic string) (*TopicRouteData, bool, er
 
 func (s *namesrvs) CheckTopicRouteHasTopic(topic string) bool {
 	_, err := s.queryTopicRouteInfoFromServer(topic)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 func (s *namesrvs) UpdateTopicRouteInfoWithDefault(topic string, defaultTopic string, defaultQueueNum int) (*TopicRouteData, bool, error) {
@@ -536,7 +533,7 @@ type TopicRouteData struct {
 
 func (routeData *TopicRouteData) decode(data string) error {
 	res := gjson.Parse(data)
-	err := jsoniter.Unmarshal([]byte(res.Get("queueDatas").String()), &routeData.QueueDataList)
+	err := json.Unmarshal([]byte(res.Get("queueDatas").String()), &routeData.QueueDataList)
 
 	if err != nil {
 		return err
@@ -552,16 +549,14 @@ func (routeData *TopicRouteData) decode(data string) error {
 		}
 		addrs := v.Get("brokerAddrs").String()
 		strs := strings.Split(addrs[1:len(addrs)-1], ",")
-		if strs != nil {
-			for _, str := range strs {
-				i := strings.Index(str, ":")
-				if i < 0 {
-					continue
-				}
-				brokerId := strings.ReplaceAll(str[0:i], "\"", "")
-				id, _ := strconv.ParseInt(brokerId, 10, 64)
-				bd.BrokerAddresses[id] = strings.Replace(str[i+1:], "\"", "", -1)
+		for _, str := range strs {
+			i := strings.Index(str, ":")
+			if i < 0 {
+				continue
 			}
+			brokerId := strings.ReplaceAll(str[0:i], "\"", "")
+			id, _ := strconv.ParseInt(brokerId, 10, 64)
+			bd.BrokerAddresses[id] = strings.Replace(str[i+1:], "\"", "", -1)
 		}
 		routeData.BrokerDataList[idx] = bd
 	}
@@ -571,18 +566,9 @@ func (routeData *TopicRouteData) decode(data string) error {
 func (routeData *TopicRouteData) clone() *TopicRouteData {
 	cloned := &TopicRouteData{
 		OrderTopicConf: routeData.OrderTopicConf,
-		QueueDataList:  make([]*QueueData, len(routeData.QueueDataList)),
-		BrokerDataList: make([]*BrokerData, len(routeData.BrokerDataList)),
+		QueueDataList:  append([]*QueueData(nil), routeData.QueueDataList...),
+		BrokerDataList: append([]*BrokerData(nil), routeData.BrokerDataList...),
 	}
-
-	for index, value := range routeData.QueueDataList {
-		cloned.QueueDataList[index] = value
-	}
-
-	for index, value := range routeData.BrokerDataList {
-		cloned.BrokerDataList[index] = value
-	}
-
 	return cloned
 }
 
@@ -609,7 +595,7 @@ func (routeData *TopicRouteData) equals(data *TopicRouteData) bool {
 }
 
 func (routeData *TopicRouteData) String() string {
-	data, _ := jsoniter.Marshal(routeData)
+	data, _ := json.Marshal(routeData)
 	return string(data)
 }
 
@@ -648,10 +634,9 @@ func (q *QueueData) Equals(qd *QueueData) bool {
 
 // BrokerData BrokerData
 type BrokerData struct {
-	Cluster             string           `json:"cluster"`
-	BrokerName          string           `json:"brokerName"`
-	BrokerAddresses     map[int64]string `json:"brokerAddrs"`
-	brokerAddressesLock sync.RWMutex
+	Cluster         string           `json:"cluster"`
+	BrokerName      string           `json:"brokerName"`
+	BrokerAddresses map[int64]string `json:"brokerAddrs"`
 }
 
 func (b *BrokerData) Equals(bd *BrokerData) bool {

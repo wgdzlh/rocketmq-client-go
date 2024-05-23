@@ -18,16 +18,18 @@ limitations under the License.
 package internal
 
 import (
-	"encoding/json"
-	"github.com/apache/rocketmq-client-go/v2/rlog"
 	"strings"
 	"testing"
+
+	"github.com/apache/rocketmq-client-go/v2/rlog"
 
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/tidwall/gjson"
 
 	"github.com/apache/rocketmq-client-go/v2/internal/utils"
 	"github.com/apache/rocketmq-client-go/v2/primitive"
+
+	json "github.com/json-iterator/go"
 )
 
 func TestHeartbeatData(t *testing.T) {
@@ -155,7 +157,7 @@ func TestConsumerRunningInfo_MarshalJSON(t *testing.T) {
 			"PROP_CONSUMEORDERLY":           "false",
 		}
 		subData := map[*SubscriptionData]bool{
-			&SubscriptionData{
+			{
 				ClassFilterMode: false,
 				Codes:           utils.NewSet(),
 				ExpType:         "TAG",
@@ -164,7 +166,7 @@ func TestConsumerRunningInfo_MarshalJSON(t *testing.T) {
 				Tags:            utils.NewSet(),
 				Topic:           "%RETRY%mq-client-go-test%GID_GO_TEST",
 			}: true,
-			&SubscriptionData{
+			{
 				ClassFilterMode: true,
 				Codes:           utils.NewSet(),
 				ExpType:         "TAG",

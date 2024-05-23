@@ -20,11 +20,9 @@ package consumer
 import (
 	"strconv"
 	"sync"
-
 	"time"
 
 	"github.com/emirpasic/gods/maps/treemap"
-	"github.com/emirpasic/gods/utils"
 	gods_util "github.com/emirpasic/gods/utils"
 	"go.uber.org/atomic"
 
@@ -78,7 +76,7 @@ func newProcessQueue(order bool) *processQueue {
 	pq := &processQueue{
 		cachedMsgCount:             atomic.NewInt64(0),
 		cachedMsgSize:              atomic.NewInt64(0),
-		msgCache:                   treemap.NewWith(utils.Int64Comparator),
+		msgCache:                   treemap.NewWith(gods_util.Int64Comparator),
 		lastPullTime:               lastPullTime,
 		lastConsumeTime:            lastConsumeTime,
 		lastLockTime:               lastLockTime,
@@ -227,11 +225,11 @@ func (pq *processQueue) removeMessage(messages ...*primitive.MessageExt) int64 {
 }
 
 func (pq *processQueue) isLockExpired() bool {
-	return time.Now().Sub(pq.LastLockTime()) > _RebalanceLockMaxTime
+	return time.Since(pq.LastLockTime()) > _RebalanceLockMaxTime
 }
 
 func (pq *processQueue) isPullExpired() bool {
-	return time.Now().Sub(pq.LastPullTime()) > _PullMaxIdleTime
+	return time.Since(pq.LastPullTime()) > _PullMaxIdleTime
 }
 
 func (pq *processQueue) cleanExpiredMsg(pc *pushConsumer) {

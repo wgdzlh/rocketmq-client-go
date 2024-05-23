@@ -53,8 +53,8 @@ func NewRequestResponseFutureMap() *requestResponseFutureCache {
 
 		if rrf.IsTimeout() {
 			rrf.CauseErr = fmt.Errorf("correlationId:%s request timeout, no reply message", s)
+			rrf.ExecuteRequestCallback()
 		}
-		rrf.ExecuteRequestCallback()
 	})
 	return &tmpRrfCache
 }
@@ -71,9 +71,7 @@ func (fm *requestResponseFutureCache) SetResponseToRequestResponseFuture(correla
 		return errors.Wrapf(nil, "correlationId:%s not exist in map", correlationId)
 	}
 	rrf.PutResponseMessage(reply)
-	if rrf.RequestCallback != nil {
-		rrf.ExecuteRequestCallback()
-	}
+	rrf.ExecuteRequestCallback()
 	return nil
 }
 
@@ -96,10 +94,10 @@ type RequestCallback func(ctx context.Context, msg *primitive.Message, err error
 // RequestResponseFuture store the rpc request. When producer wait for the response, get RequestResponseFuture.
 type RequestResponseFuture struct {
 	CorrelationId   string
-	mtx             sync.RWMutex
 	ResponseMsg     *primitive.Message
 	Timeout         time.Duration
 	RequestCallback RequestCallback
+	callbackOnce    sync.Once
 	SendRequestOk   bool
 	Done            chan struct{}
 	CauseErr        error
@@ -120,8 +118,9 @@ func (rf *RequestResponseFuture) ExecuteRequestCallback() {
 	if rf.RequestCallback == nil {
 		return
 	}
-
-	rf.RequestCallback(context.Background(), rf.ResponseMsg, rf.CauseErr)
+	rf.callbackOnce.Do(func() {
+		rf.RequestCallback(context.Background(), rf.ResponseMsg, rf.CauseErr)
+	})
 }
 
 func (rf *RequestResponseFuture) WaitResponseMessage(reqMsg *primitive.Message) (*primitive.Message, error) {
@@ -131,20 +130,19 @@ func (rf *RequestResponseFuture) WaitResponseMessage(reqMsg *primitive.Message) 
 		rlog.Error(err.Error(), nil)
 		return nil, err
 	case <-rf.Done:
-		rf.mtx.RLock()
-		rf.mtx.RUnlock()
 		return rf.ResponseMsg, nil
 	}
 }
 
 func (rf *RequestResponseFuture) PutResponseMessage(message *primitive.Message) {
-	rf.mtx.Lock()
-	defer rf.mtx.Unlock()
 	rf.ResponseMsg = message
 	close(rf.Done)
 }
 
 func (rf *RequestResponseFuture) IsTimeout() bool {
+	if rf.ResponseMsg != nil {
+		return false
+	}
 	diff := time.Since(rf.BeginTime)
 	return diff > rf.Timeout
 }

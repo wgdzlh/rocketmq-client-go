@@ -19,9 +19,7 @@ package internal
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
-	"github.com/tidwall/gjson"
 	"sort"
 	"strconv"
 	"strings"
@@ -29,7 +27,9 @@ import (
 	"github.com/apache/rocketmq-client-go/v2/internal/utils"
 	"github.com/apache/rocketmq-client-go/v2/primitive"
 	"github.com/apache/rocketmq-client-go/v2/rlog"
-	jsoniter "github.com/json-iterator/go"
+
+	json "github.com/json-iterator/go"
+	"github.com/tidwall/gjson"
 )
 
 type FindBrokerResult struct {
@@ -124,7 +124,7 @@ func NewHeartbeatData(clientID string) *heartbeatData {
 }
 
 func (data *heartbeatData) encode() []byte {
-	d, err := jsoniter.Marshal(data)
+	d, err := json.Marshal(data)
 	if err != nil {
 		rlog.Error("marshal heartbeatData error", map[string]interface{}{
 			rlog.LogKeyUnderlayError: err,
@@ -203,7 +203,7 @@ func (info ConsumerRunningInfo) Encode() ([]byte, error) {
 		sub1 := subs[i]
 		sub2 := subs[j]
 		if sub1.ClassFilterMode != sub2.ClassFilterMode {
-			return sub1.ClassFilterMode == false
+			return !sub1.ClassFilterMode
 		}
 		com := strings.Compare(sub1.Topic, sub1.Topic)
 		if com != 0 {
@@ -275,6 +275,9 @@ func (info ConsumerRunningInfo) Encode() ([]byte, error) {
 			return nil, err
 		}
 		dataV, err := json.Marshal(info.MQTable[keys[idx]])
+		if err != nil {
+			return nil, err
+		}
 		tableJson = fmt.Sprintf("%s,%s:%s", tableJson, string(dataK), string(dataV))
 	}
 	tableJson = strings.TrimLeft(tableJson, ",")
@@ -329,6 +332,9 @@ func (status ConsumerStatus) Encode() ([]byte, error) {
 			return nil, err
 		}
 		dataV, err := json.Marshal(status.MQOffsetMap[keys[idx]])
+		if err != nil {
+			return nil, err
+		}
 		mapJson = fmt.Sprintf("%s,%s:%s", mapJson, string(dataK), string(dataV))
 	}
 	mapJson = strings.TrimLeft(mapJson, ",")
@@ -430,7 +436,7 @@ func parseGsonFormat(body []byte) map[primitive.MessageQueue]int64 {
 			kstr = kvArray[0] + "}"
 		}
 		kObj := new(primitive.MessageQueue)
-		err = jsoniter.Unmarshal([]byte(kstr), &kObj)
+		err = json.Unmarshal([]byte(kstr), &kObj)
 		if err != nil {
 			rlog.Error("Unmarshal message queue error", map[string]interface{}{
 				rlog.LogKeyUnderlayError: err,
@@ -467,7 +473,7 @@ func parseFastJsonFormat(body []byte) map[primitive.MessageQueue]int64 {
 
 		var err error
 		// ignore err for now
-		offset, err := strconv.Atoi(tuple[1])
+		offset, _ := strconv.Atoi(tuple[1])
 
 		var queue primitive.MessageQueue
 		err = json.Unmarshal([]byte(queueStr), &queue)

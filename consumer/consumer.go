@@ -27,7 +27,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	jsoniter "github.com/json-iterator/go"
+	json "github.com/json-iterator/go"
 	"github.com/tidwall/gjson"
 
 	"github.com/apache/rocketmq-client-go/v2/errors"
@@ -611,7 +611,7 @@ func (dc *defaultConsumer) unlockAll(oneway bool) {
 }
 
 func (dc *defaultConsumer) doLock(addr string, body *lockBatchRequestBody) []primitive.MessageQueue {
-	data, _ := jsoniter.Marshal(body)
+	data, _ := json.Marshal(body)
 	request := remote.NewRemotingCommand(internal.ReqLockBatchMQ, nil, data)
 	response, err := dc.client.InvokeSync(context.Background(), addr, request, 1*time.Second)
 	if err != nil {
@@ -627,7 +627,7 @@ func (dc *defaultConsumer) doLock(addr string, body *lockBatchRequestBody) []pri
 	if len(response.Body) == 0 {
 		return nil
 	}
-	err = jsoniter.Unmarshal(response.Body, &lockOKMQSet)
+	err = json.Unmarshal(response.Body, &lockOKMQSet)
 	if err != nil {
 		rlog.Error("Unmarshal lock mq body error", map[string]interface{}{
 			rlog.LogKeyUnderlayError: err,
@@ -638,7 +638,7 @@ func (dc *defaultConsumer) doLock(addr string, body *lockBatchRequestBody) []pri
 }
 
 func (dc *defaultConsumer) doUnlock(addr string, body *lockBatchRequestBody, oneway bool) {
-	data, _ := jsoniter.Marshal(body)
+	data, _ := json.Marshal(body)
 	request := remote.NewRemotingCommand(internal.ReqUnlockBatchMQ, nil, data)
 	if oneway {
 		err := dc.client.InvokeOneWay(context.Background(), addr, request, 3*time.Second)
@@ -763,7 +763,7 @@ func (dc *defaultConsumer) updateProcessQueueTable(topic string, mqs []*primitiv
 	return changed
 }
 
-func (dc *defaultConsumer) removeUnnecessaryMessageQueue(mq *primitive.MessageQueue, pq *processQueue) bool {
+func (dc *defaultConsumer) removeUnnecessaryMessageQueue(mq *primitive.MessageQueue, _ *processQueue) bool {
 	dc.storage.persist([]*primitive.MessageQueue{mq})
 	dc.storage.remove(mq)
 	return true
@@ -842,7 +842,7 @@ func (dc *defaultConsumer) computePullFromWhereWithException(mq *primitive.Messa
 	return result, nil
 }
 
-func (dc *defaultConsumer) pullInner(ctx context.Context, queue *primitive.MessageQueue, data *internal.SubscriptionData,
+func (dc *defaultConsumer) pullInner(_ context.Context, queue *primitive.MessageQueue, data *internal.SubscriptionData,
 	offset int64, numbers int, sysFlag int32, commitOffsetValue int64) (*primitive.PullResult, error) {
 
 	brokerResult := dc.tryFindBroker(queue)
@@ -969,7 +969,7 @@ func (dc *defaultConsumer) findConsumerList(topic string) []string {
 	return nil
 }
 
-func (dc *defaultConsumer) sendBack(msg *primitive.MessageExt, level int) error {
+func (dc *defaultConsumer) sendBack(_ *primitive.MessageExt, _ int) error {
 	return nil
 }
 

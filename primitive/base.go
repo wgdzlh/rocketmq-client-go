@@ -18,9 +18,10 @@ limitations under the License.
 package primitive
 
 import (
-	"github.com/apache/rocketmq-client-go/v2/errors"
 	"regexp"
 	"strings"
+
+	"github.com/apache/rocketmq-client-go/v2/errors"
 )
 
 var (
@@ -32,7 +33,7 @@ type NamesrvAddr []string
 
 func NewNamesrvAddr(s ...string) (NamesrvAddr, error) {
 	if len(s) == 0 {
-		return nil, errors.ErrNoNameserver
+		return nil, errors.ErrNoNameServer
 	}
 
 	ss := s

@@ -117,7 +117,7 @@ func (c *remotingClient) InvokeAsync(ctx context.Context, addr string, request *
 	}
 
 	resp := NewResponseFuture(ctx, request.Opaque, callback)
-	c.responseTable.Store(resp.Opaque, resp)
+	c.responseTable.Store(request.Opaque, resp)
 
 	err = c.sendRequest(conn, request)
 	if err != nil {
@@ -230,9 +230,7 @@ func (c *remotingClient) processCMD(cmd *RemotingCommand, r *tcpConnWrapper) {
 			go primitive.WithRecover(func() {
 				responseFuture.ResponseCommand = cmd
 				responseFuture.executeInvokeCallback()
-				if responseFuture.Done != nil {
-					close(responseFuture.Done)
-				}
+				close(responseFuture.Done)
 			})
 		}
 	} else {
@@ -323,7 +321,7 @@ func (c *remotingClient) doRequest(conn *tcpConnWrapper, request *RemotingComman
 		return err
 	}
 
-	err = request.WriteTo(conn)
+	err = request.EncodeTo(conn)
 	if err != nil {
 		rlog.Error("conn error, close connection", map[string]interface{}{
 			rlog.LogKeyUnderlayError: err,

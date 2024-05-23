@@ -21,16 +21,17 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/apache/rocketmq-client-go/v2"
-	"github.com/apache/rocketmq-client-go/v2/consumer"
-	"github.com/apache/rocketmq-client-go/v2/primitive"
-	"github.com/apache/rocketmq-client-go/v2/rlog"
 	"os"
 	"os/signal"
 	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"github.com/apache/rocketmq-client-go/v2"
+	"github.com/apache/rocketmq-client-go/v2/consumer"
+	"github.com/apache/rocketmq-client-go/v2/primitive"
+	"github.com/apache/rocketmq-client-go/v2/rlog"
 )
 
 type statiBenchmarkConsumerSnapshot struct {
@@ -168,13 +169,17 @@ func (bc *consumerBenchmark) consumeMsg(stati *statiBenchmarkConsumerSnapshot, e
 		return consumer.ConsumeSuccess, nil
 	})
 
-	rlog.Info("Test Start", nil)
-	c.Start()
-	select {
-	case <-exit:
-		c.Shutdown()
+	if err != nil {
+		rlog.Error("Subscribe Failed", map[string]interface{}{
+			rlog.LogKeyUnderlayError: err.Error(),
+		})
 		return
 	}
+
+	rlog.Info("Test Start", nil)
+	c.Start()
+	<-exit
+	c.Shutdown()
 }
 
 func (bc *consumerBenchmark) run(args []string) {

@@ -17,15 +17,14 @@
 package remote
 
 import (
-	"encoding/json"
-	"github.com/apache/rocketmq-client-go/v2/rlog"
 	"math/rand"
 	"reflect"
 	"testing"
 	"unsafe"
 
-	jsoniter "github.com/json-iterator/go"
+	"github.com/apache/rocketmq-client-go/v2/rlog"
 
+	json "github.com/json-iterator/go"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -354,7 +353,7 @@ func TestCommandJsonIter(t *testing.T) {
 		"data": *(*string)(unsafe.Pointer(&cmdData)),
 	})
 
-	data, err := jsoniter.Marshal(cmd)
+	data, err := json.Marshal(cmd)
 	assert.Nil(t, err)
 	rlog.Info("Command Data From Jsoniter", map[string]interface{}{
 		"data": *(*string)(unsafe.Pointer(&data)),

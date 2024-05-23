@@ -59,7 +59,7 @@ func TestHttpResolverWithGet(t *testing.T) {
 			"192.168.100.5",
 		}
 		http.HandleFunc("/nameserver/addrs2", func(w http.ResponseWriter, r *http.Request) {
-			fmt.Fprintf(w, strings.Join(srvs, ";"))
+			fmt.Fprint(w, strings.Join(srvs, ";"))
 		})
 		server := &http.Server{Addr: ":0", Handler: nil}
 		listener, _ := net.Listen("tcp", ":0")
@@ -93,9 +93,8 @@ func TestHttpResolverWithGetUnitName(t *testing.T) {
 		}
 		http.HandleFunc("/nameserver/addrs3-unsh", func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Query().Get("nofix") == "1" {
-				fmt.Fprintf(w, strings.Join(srvs, ";"))
+				fmt.Fprint(w, strings.Join(srvs, ";"))
 			}
-			fmt.Fprintf(w, "")
 		})
 		server := &http.Server{Addr: ":0", Handler: nil}
 		listener, _ := net.Listen("tcp", ":0")

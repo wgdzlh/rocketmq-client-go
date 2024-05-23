@@ -211,7 +211,7 @@ func (sis *statsItemSet) init() {
 	})
 
 	go primitive.WithRecover(func() {
-		time.Sleep(nextMinutesTime().Sub(time.Now()))
+		time.Sleep(time.Until(nextMinutesTime()))
 		ticker := time.NewTicker(time.Minute)
 		defer ticker.Stop()
 		for {
@@ -225,7 +225,7 @@ func (sis *statsItemSet) init() {
 	})
 
 	go primitive.WithRecover(func() {
-		time.Sleep(nextHourTime().Sub(time.Now()))
+		time.Sleep(time.Until(nextHourTime()))
 		ticker := time.NewTicker(time.Hour)
 		defer ticker.Stop()
 		for {
@@ -239,7 +239,7 @@ func (sis *statsItemSet) init() {
 	})
 
 	go primitive.WithRecover(func() {
-		time.Sleep(nextMonthTime().Sub(time.Now()))
+		time.Sleep(time.Until(nextMonthTime()))
 		ticker := time.NewTicker(24 * time.Hour)
 		defer ticker.Stop()
 		for {

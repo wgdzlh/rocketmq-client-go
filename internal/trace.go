@@ -282,6 +282,7 @@ func NewTraceDispatcher(traceCfg *primitive.TraceConfig) *traceDispatcher {
 	cliOp.Credentials = traceCfg.Credentials
 	cli := GetOrNewRocketMQClient(cliOp, nil)
 	if cli == nil {
+		cancel()
 		return nil
 	}
 	cliOp.Namesrv = cli.GetNameSrv()
@@ -373,7 +374,6 @@ func (td *traceDispatcher) process(maxWaitTime int64) {
 			go primitive.WithRecover(func() {
 				td.batchCommit(batchSend)
 			})
-			batch = make([]TraceContext, 0)
 
 			now := time.Now().UnixNano() / int64(time.Millisecond)
 			end := now + 500
@@ -406,13 +406,13 @@ func (td *traceDispatcher) batchCommit(ctxs []TraceContext) {
 
 	for k, v := range keyedCtxs {
 		arr := strings.Split(k, string([]byte{contentSplitter}))
-		topic := k
+		// topic := k
 		regionID := ""
 		if len(arr) > 1 {
-			topic = arr[0]
+			// topic = arr[0]
 			regionID = arr[1]
 		}
-		td.flush(topic, regionID, v)
+		td.flush(regionID, v)
 	}
 }
 
@@ -420,14 +420,14 @@ type Keyset map[string]struct{}
 
 func (ks Keyset) slice() []string {
 	slice := make([]string, len(ks))
-	for k, _ := range ks {
+	for k := range ks {
 		slice = append(slice, k)
 	}
 	return slice
 }
 
 // flush data in batch.
-func (td *traceDispatcher) flush(topic, regionID string, data []TraceTransferBean) {
+func (td *traceDispatcher) flush(regionID string, data []TraceTransferBean) {
 	if len(data) == 0 {
 		return
 	}

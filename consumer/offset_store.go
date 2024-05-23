@@ -31,7 +31,8 @@ import (
 	"github.com/apache/rocketmq-client-go/v2/internal/utils"
 	"github.com/apache/rocketmq-client-go/v2/primitive"
 	"github.com/apache/rocketmq-client-go/v2/rlog"
-	jsoniter "github.com/json-iterator/go"
+
+	json "github.com/json-iterator/go"
 )
 
 type readType int
@@ -78,7 +79,7 @@ func (mq MessageQueueKey) MarshalText() (text []byte, err error) {
 		BrokerName: mq.BrokerName,
 		QueueId:    mq.QueueId,
 	}
-	text, err = jsoniter.Marshal(repr)
+	text, err = json.Marshal(repr)
 	return
 }
 
@@ -88,7 +89,7 @@ func (mq *MessageQueueKey) UnmarshalText(text []byte) error {
 		BrokerName string `json:"brokerName"`
 		QueueId    int    `json:"queueId"`
 	}{}
-	err := jsoniter.Unmarshal(text, &repr)
+	err := json.Unmarshal(text, &repr)
 	if err != nil {
 		return err
 	}
@@ -136,13 +137,9 @@ func (local *localFileOffsetStore) load() {
 		})
 		return
 	}
-	datas := make(map[MessageQueueKey]int64)
 
-	wrapper := OffsetSerializeWrapper{
-		OffsetTable: datas,
-	}
-
-	err = jsoniter.Unmarshal(data, &wrapper)
+	wrapper := OffsetSerializeWrapper{}
+	err = json.Unmarshal(data, &wrapper)
 	if err != nil {
 		rlog.Warning("unmarshal local offset error", map[string]interface{}{
 			"local_path":             local.path,
@@ -151,10 +148,8 @@ func (local *localFileOffsetStore) load() {
 		return
 	}
 
-	if datas != nil {
-		for k, v := range datas {
-			local.OffsetTable.Store(k, v)
-		}
+	for k, v := range wrapper.OffsetTable {
+		local.OffsetTable.Store(k, v)
 	}
 }
 
@@ -221,7 +216,7 @@ func (local *localFileOffsetStore) persist(mqs []*primitive.MessageQueue) {
 	wrapper := OffsetSerializeWrapper{
 		OffsetTable: datas,
 	}
-	data, _ := jsoniter.Marshal(wrapper)
+	data, _ := json.Marshal(wrapper)
 	utils.CheckError(fmt.Sprintf("persist offset to %s", local.path), utils.WriteToFile(local.path, data))
 }
 

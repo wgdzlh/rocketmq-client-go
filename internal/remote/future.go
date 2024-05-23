@@ -19,8 +19,9 @@ package remote
 
 import (
 	"context"
-	"github.com/apache/rocketmq-client-go/v2/errors"
 	"sync"
+
+	"github.com/apache/rocketmq-client-go/v2/errors"
 )
 
 // ResponseFuture
@@ -45,10 +46,11 @@ func NewResponseFuture(ctx context.Context, opaque int32, callback func(*Respons
 }
 
 func (r *ResponseFuture) executeInvokeCallback() {
+	if r.callback == nil {
+		return
+	}
 	r.callbackOnce.Do(func() {
-		if r.callback != nil {
-			r.callback(r)
-		}
+		r.callback(r)
 	})
 }
 

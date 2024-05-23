@@ -17,7 +17,7 @@ limitations under the License.
 
 package admin
 
-import "encoding/json"
+import json "github.com/json-iterator/go"
 
 type RemotingSerializable struct {
 }
@@ -45,6 +45,7 @@ func (r *RemotingSerializable) ToJson(obj interface{}, prettyFormat bool) string
 		return string(jsonBytes)
 	}
 }
+
 func (r *RemotingSerializable) Decode(data []byte, classOfT interface{}) (interface{}, error) {
 	jsonStr := string(data)
 	return r.FromJson(jsonStr, classOfT)

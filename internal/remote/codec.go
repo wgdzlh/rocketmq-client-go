@@ -23,7 +23,7 @@ import (
 	"io"
 	"sync/atomic"
 
-	jsoniter "github.com/json-iterator/go"
+	json "github.com/json-iterator/go"
 )
 
 var opaque int32
@@ -133,7 +133,7 @@ var (
 // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // + len  |   4bytes   |     4bytes    | (21 + r_len + e_len) bytes | remain bytes +
 // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-func (command *RemotingCommand) WriteTo(w io.Writer) error {
+func (command *RemotingCommand) EncodeTo(w io.Writer) error {
 	var (
 		header []byte
 		err    error
@@ -276,7 +276,7 @@ type serializer interface {
 type jsonCodec struct{}
 
 func (c *jsonCodec) encodeHeader(command *RemotingCommand) ([]byte, error) {
-	buf, err := jsoniter.Marshal(command)
+	buf, err := json.Marshal(command)
 	if err != nil {
 		return nil, err
 	}
@@ -287,7 +287,7 @@ func (c *jsonCodec) decodeHeader(header []byte) (*RemotingCommand, error) {
 	command := &RemotingCommand{}
 	command.ExtFields = make(map[string]string)
 	command.Body = make([]byte, 0)
-	err := jsoniter.Unmarshal(header, command)
+	err := json.Unmarshal(header, command)
 	if err != nil {
 		return nil, err
 	}
@@ -385,7 +385,7 @@ func (c *rmqCodec) encodeHeader(command *RemotingCommand) ([]byte, error) {
 }
 
 func (c *rmqCodec) encodeMaps(maps map[string]string) ([]byte, error) {
-	if maps == nil || len(maps) == 0 {
+	if len(maps) == 0 {
 		return []byte{}, nil
 	}
 	extFieldsBuf := bytes.NewBuffer([]byte{})

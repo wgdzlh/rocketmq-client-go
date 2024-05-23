@@ -221,15 +221,17 @@ func (p *defaultProducer) Request(ctx context.Context, timeout time.Duration, ms
 		requestResponseFuture.SendRequestOk = true
 	}
 
+	var resErr error
 	if p.interceptor != nil {
 		ctx = primitive.WithMethod(ctx, primitive.SendAsync)
-
-		return nil, p.interceptor(ctx, msg, nil, func(ctx context.Context, req, reply interface{}) error {
+		resErr = p.interceptor(ctx, msg, nil, func(ctx context.Context, req, reply interface{}) error {
 			return p.sendAsync(ctx, msg, f)
 		})
+	} else {
+		resErr = p.sendAsync(ctx, msg, f)
 	}
-	if err := p.sendAsync(ctx, msg, f); err != nil {
-		return nil, errors.Wrap(err, "sendAsync error")
+	if resErr != nil {
+		return nil, errors.Wrap(resErr, "sendAsync error")
 	}
 
 	return requestResponseFuture.WaitResponseMessage(msg)
@@ -267,11 +269,13 @@ func (p *defaultProducer) RequestAsync(ctx context.Context, timeout time.Duratio
 		resErr = p.interceptor(ctx, msg, nil, func(ctx context.Context, req, reply interface{}) error {
 			return p.sendAsync(ctx, msg, f)
 		})
+	} else {
+		resErr = p.sendAsync(ctx, msg, f)
 	}
-	resErr = p.sendAsync(ctx, msg, f)
 	if resErr != nil {
 		internal.RequestResponseFutureMap.RemoveRequestResponseFuture(correlationId)
 	}
+
 	return resErr
 }
 
@@ -291,7 +295,7 @@ func (p *defaultProducer) SendSync(ctx context.Context, msgs ...*primitive.Messa
 			ProducerGroup:     p.group,
 			CommunicationMode: primitive.SendSync,
 			BornHost:          utils.LocalIP,
-			Message:           *msg,
+			Message:           msg,
 			SendResult:        resp,
 		}
 		ctx = primitive.WithProducerCtx(ctx, producerCtx)
@@ -315,11 +319,8 @@ func (p *defaultProducer) sendSync(ctx context.Context, msg *primitive.Message, 
 	retryTime := 1 + p.options.RetryTimes
 
 	var (
-		err error
-		mq  *primitive.MessageQueue
-	)
-
-	var (
+		err         error
+		mq          *primitive.MessageQueue
 		producerCtx *primitive.ProducerCtx
 		ok          bool
 	)
@@ -328,7 +329,7 @@ func (p *defaultProducer) sendSync(ctx context.Context, msg *primitive.Message, 
 		if mq != nil {
 			lastBrokerName = mq.BrokerName
 		}
-		mq := p.selectMessageQueue(msg, lastBrokerName)
+		mq = p.selectMessageQueue(msg, lastBrokerName)
 		if mq == nil {
 			err = fmt.Errorf("the topic=%s route info not found", msg.Topic)
 			continue
@@ -380,11 +381,11 @@ func (p *defaultProducer) SendAsync(ctx context.Context, f func(context.Context,
 
 	if p.interceptor != nil {
 		ctx = primitive.WithMethod(ctx, primitive.SendAsync)
-
 		return p.interceptor(ctx, msg, nil, func(ctx context.Context, req, reply interface{}) error {
 			return p.sendAsync(ctx, msg, f)
 		})
 	}
+
 	return p.sendAsync(ctx, msg, f)
 }
 
@@ -400,11 +401,12 @@ func (p *defaultProducer) sendAsync(ctx context.Context, msg *primitive.Message,
 		return errors.Errorf("topic=%s route info not found", mq.Topic)
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	err := p.client.InvokeAsync(ctx, addr, p.buildSendRequest(mq, msg), func(command *remote.RemotingCommand, err error) {
+	sendCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	err := p.client.InvokeAsync(sendCtx, addr, p.buildSendRequest(mq, msg), func(command *remote.RemotingCommand, err error) {
 		cancel()
 		if err != nil {
 			h(ctx, nil, err)
+			return
 		}
 
 		resp := primitive.NewSendResult()
