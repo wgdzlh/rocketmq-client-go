@@ -101,8 +101,9 @@ func NewAdmin(opts ...AdminOption) (*admin, error) {
 	if cli == nil {
 		return nil, fmt.Errorf("GetOrNewRocketMQClient faild")
 	}
-	cli.Start()
 	defaultOpts.Namesrv = cli.GetNameSrv()
+	cli.Start()
+	rlog.Info("cli started in admin", nil)
 	//log.Printf("Client: %#v", namesrv.srvs)
 	return &admin{
 		cli:  cli,
@@ -120,7 +121,7 @@ func (a *admin) GetAllSubscriptionGroup(ctx context.Context, brokerAddr string, 
 		})
 		return nil, err
 	} else {
-		rlog.Info("Get all group list success", map[string]interface{}{})
+		rlog.Info("Get all group list success", nil)
 	}
 	var subscriptionGroupWrapper SubscriptionGroupWrapper
 	_, err = subscriptionGroupWrapper.Decode(response.Body, &subscriptionGroupWrapper)
@@ -142,7 +143,7 @@ func (a *admin) FetchAllTopicList(ctx context.Context) (*TopicList, error) {
 		})
 		return nil, err
 	} else {
-		rlog.Info("Fetch all topic list success", map[string]interface{}{})
+		rlog.Info("Fetch all topic list success", nil)
 	}
 	var topicList TopicList
 	_, err = topicList.Decode(response.Body, &topicList)
